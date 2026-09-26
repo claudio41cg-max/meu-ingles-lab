@@ -23,9 +23,19 @@ async function getKokoro(){
         dtype:'q8',
         device:'wasm'
       });
-    })();
+    })().catch(err=>{
+      kokoroPromise=null;
+      throw err;
+    });
   }
   return kokoroPromise;
+}
+
+export function prepareVoices(){
+  return getKokoro().then(()=>true).catch(err=>{
+    console.warn('Falha ao preparar Kokoro.',err);
+    return false;
+  });
 }
 
 function stopAllAudio(){
