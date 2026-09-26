@@ -1,7 +1,7 @@
 const voices=[
-  {id:'pf_dora',name:'Dora',lang:'Português BR · feminina',group:'pt',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/pf_dora.mp3'},
-  {id:'pm_alex',name:'Alex',lang:'Português BR · masculina',group:'pt',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/pm_alex.mp3'},
-  {id:'pm_santa',name:'Santa',lang:'Português BR · masculina',group:'pt',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/pm_santa.mp3'},
+  {id:'pf_dora',name:'Dora',lang:'Português BR · feminina',group:'pt',url:'https://raw.githubusercontent.com/alexlivre/kokoro-82m-tts/main/test_pf_dora.mp3'},
+  {id:'pm_alex',name:'Alex',lang:'Português BR · masculina',group:'pt',url:'https://raw.githubusercontent.com/alexlivre/kokoro-82m-tts/main/test_pm_alex.mp3'},
+  {id:'pm_santa',name:'Santa',lang:'Português BR · masculina',group:'pt',url:'https://raw.githubusercontent.com/alexlivre/kokoro-82m-tts/main/test_pm_santa.mp3'},
   {id:'af_heart',name:'Heart',lang:'Inglês EUA · feminina',group:'en',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/af_heart.mp3'},
   {id:'af_bella',name:'Bella',lang:'Inglês EUA · feminina',group:'en',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/af_bella.mp3'},
   {id:'am_michael',name:'Michael',lang:'Inglês EUA · masculina',group:'en',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/am_michael.mp3'},
@@ -17,13 +17,13 @@ export function renderVoiceLab(root,{back}){
       <div>
         <div class="eyebrow">Laboratório</div>
         <h2 style="margin:2px 0">Comparar vozes</h2>
-        <div class="muted">Teste gratuito por amostras hospedadas</div>
+        <div class="muted">Português real nas vozes BR · inglês nas vozes EN</div>
       </div>
     </div>
 
     <article class="card voiceLabIntro">
       <b>Objetivo</b>
-      <p class="muted">Escolher vozes bonitas antes de integrá-las às aulas. Aqui não há chamada ao Gemini e não há geração local pesada.</p>
+      <p class="muted">Escolher vozes bonitas antes de integrá-las às aulas. Dora, Alex e Santa falam português brasileiro neste teste. As vozes inglesas falam inglês. Aqui não há chamada ao Gemini e não há geração local pesada.</p>
     </article>
 
     <h3>Português brasileiro</h3>
