@@ -1,10 +1,11 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortugueseDora} from './services/tts-service.js?v=5';
+import {speak,speakPortugueseDora,prepareVoices} from './services/tts-service.js?v=6';
 import {renderVoiceLab} from './ui/voice-lab.js?v=3';
 
 const root=document.querySelector('#app');
+prepareVoices();
 let session=null;
 
 function home(){
