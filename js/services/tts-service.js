@@ -1,100 +1,276 @@
-export const ENGLISH_VOICE={provider:'kokoro',voice:'af_heart',name:'Heart',lang:'en-US'};
+const TTS_URL='https://meu-ingles-livid.vercel.app/api/gemini-tts';
+const DB_NAME='meuIngles2TTSCacheV1';
+const STORE='voices';
+const STATS_KEY='meuIngles2TTSStatsV1';
 
-export const PROFESSOR_VOICES={
-  tranquilo:{provider:'kokoro',voice:'pf_dora',name:'Dora',lang:'pt-BR'},
-  doideira:{provider:'kokoro',voice:'pm_alex',name:'Alex',lang:'pt-BR'},
-  hard:{provider:'kokoro',voice:'pm_santa',name:'Santa',lang:'pt-BR'}
-};
+export const ENGLISH_VOICE={provider:'gemini-2.5',voice:'Achird',name:'Achird',lang:'en-US'};
+export const PORTUGUESE_VOICE={provider:'gemini-2.5',voice:'Aoede',name:'Aoede',lang:'pt-BR'};
 
-export function getProfessorVoice(professor){
-  return PROFESSOR_VOICES[professor]||PROFESSOR_VOICES.tranquilo;
+const mem=new Map();
+const pending=new Map();
+let dbPromise=null;
+let audioCtx=null;
+let currentSource=null;
+let seq=0;
+
+function cleanText(text){
+  return String(text||'').replace(/\s+/g,' ').trim();
 }
 
-const memory=new Map();
-let kokoroPromise=null;
-let activeAudio=null;
-let requestSeq=0;
-
-async function getKokoro(){
-  if(!kokoroPromise){
-    kokoroPromise=(async()=>{
-      const {KokoroTTS}=await import('https://esm.sh/kokoro-js');
-      return KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX',{
-        dtype:'q8',
-        device:'wasm'
-      });
-    })().catch(err=>{
-      kokoroPromise=null;
-      throw err;
-    });
-  }
-  return kokoroPromise;
+function cacheKey(text,lang,voice){
+  return [voice,lang,cleanText(text)].join('|');
 }
 
-export function prepareVoices(){
-  return getKokoro().then(()=>true).catch(err=>{
-    console.warn('Falha ao preparar Kokoro.',err);
-    return false;
+function openDb(){
+  if(!('indexedDB' in window))return Promise.resolve(null);
+  if(dbPromise)return dbPromise;
+  dbPromise=new Promise(resolve=>{
+    try{
+      const req=indexedDB.open(DB_NAME,1);
+      req.onupgradeneeded=()=>{
+        const db=req.result;
+        if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
+      };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>resolve(null);
+      req.onblocked=()=>resolve(null);
+    }catch{resolve(null)}
+  });
+  return dbPromise;
+}
+
+async function dbGet(key){
+  const db=await openDb();
+  if(!db)return null;
+  return new Promise(resolve=>{
+    try{
+      const tx=db.transaction(STORE,'readonly');
+      const req=tx.objectStore(STORE).get(key);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>resolve(null);
+    }catch{resolve(null)}
   });
 }
 
-function stopAllAudio(){
-  requestSeq++;
-  if(activeAudio){
-    activeAudio.pause();
-    activeAudio.currentTime=0;
-    activeAudio=null;
-  }
-  if('speechSynthesis' in window)speechSynthesis.cancel();
-  return requestSeq;
+async function dbPut(key,data){
+  const db=await openDb();
+  if(!db||!data?.audio)return false;
+  return new Promise(resolve=>{
+    try{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put({
+        audio:data.audio,
+        sample_rate:data.sample_rate||24000,
+        voice:data.voice||'',
+        model:data.model||'gemini-2.5-flash-preview-tts',
+        saved_at:Date.now()
+      },key);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>resolve(false);
+      tx.onabort=()=>resolve(false);
+    }catch{resolve(false)}
+  });
 }
 
-async function speakKokoro(text,voiceId,cachePrefix){
-  const mySeq=stopAllAudio();
-  const key=cachePrefix+'|'+text;
+async function cached(key){
+  if(mem.has(key))return mem.get(key);
+  const saved=await dbGet(key);
+  if(saved?.audio){
+    mem.set(key,saved);
+    return saved;
+  }
+  return null;
+}
+
+function estimate(data,text){
+  let seconds=0;
   try{
-    let url=memory.get(key);
-    if(!url){
-      const tts=await getKokoro();
-      if(mySeq!==requestSeq)return false;
-      const raw=await tts.generate(text,{voice:voiceId});
-      if(mySeq!==requestSeq)return false;
-      const blob=raw.toBlob();
-      url=URL.createObjectURL(blob);
-      memory.set(key,url);
-    }
-    if(mySeq!==requestSeq)return false;
-    const audio=new Audio(url);
-    activeAudio=audio;
-    audio.onended=()=>{if(activeAudio===audio)activeAudio=null;};
-    await audio.play();
-    return true;
+    const bytes=Math.floor(String(data?.audio||'').length*3/4);
+    seconds=bytes/(2*(Number(data?.sample_rate)||24000));
+  }catch{}
+  const meta=data?.usageMetadata||data?.usage_metadata||{};
+  const inputTokens=Number(meta.promptTokenCount||meta.prompt_token_count)||Math.max(1,Math.ceil(cleanText(text).length/4));
+  const outputTokens=Number(meta.candidatesTokenCount||meta.candidates_token_count)||Math.max(0,Math.round(seconds*25));
+  return {
+    seconds,
+    inputTokens,
+    outputTokens,
+    tokens:inputTokens+outputTokens,
+    usd:inputTokens*(0.50/1e6)+outputTokens*(10/1e6)
+  };
+}
+
+function loadStats(){
+  try{
+    const x=JSON.parse(localStorage.getItem(STATS_KEY)||'{}');
+    return {
+      generated:Number(x.generated)||0,
+      cache:Number(x.cache)||0,
+      tokens:Number(x.tokens)||0,
+      usd:Number(x.usd)||0,
+      savedTokens:Number(x.savedTokens)||0,
+      savedUsd:Number(x.savedUsd)||0
+    };
+  }catch{
+    return {generated:0,cache:0,tokens:0,usd:0,savedTokens:0,savedUsd:0};
+  }
+}
+
+function saveStats(s){
+  try{localStorage.setItem(STATS_KEY,JSON.stringify(s))}catch{}
+  window.dispatchEvent(new CustomEvent('meu-ingles-2-tts-stats',{detail:s}));
+}
+
+function record(kind,data,text){
+  const e=estimate(data,text);
+  const s=loadStats();
+  if(kind==='api'){
+    s.generated++;
+    s.tokens+=e.tokens;
+    s.usd+=e.usd;
+  }else{
+    s.cache++;
+    s.savedTokens+=e.tokens;
+    s.savedUsd+=e.usd;
+  }
+  saveStats(s);
+}
+
+export function getAudioStats(){
+  return loadStats();
+}
+
+function ensureCtx(){
+  const C=window.AudioContext||window.webkitAudioContext;
+  if(!C)throw new Error('AudioContext indisponível');
+  if(!audioCtx||audioCtx.state==='closed')audioCtx=new C();
+  return audioCtx;
+}
+
+async function unlock(){
+  const ctx=ensureCtx();
+  if(ctx.state==='suspended'){
+    try{await ctx.resume()}catch{}
+  }
+  return ctx;
+}
+
+function stopCurrent(){
+  seq++;
+  if(currentSource){
+    try{currentSource.onended=null}catch{}
+    try{currentSource.stop()}catch{}
+    try{currentSource.disconnect()}catch{}
+    currentSource=null;
+  }
+  try{window.speechSynthesis?.cancel()}catch{}
+}
+
+function b64ToFloat32(b64){
+  const bin=atob(String(b64||''));
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const count=Math.floor(bytes.byteLength/2);
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  const out=new Float32Array(count);
+  for(let i=0;i<count;i++)out[i]=Math.max(-1,Math.min(1,view.getInt16(i*2,true)/32768));
+  return out;
+}
+
+async function playPCM(data,mySeq){
+  const ctx=await unlock();
+  if(mySeq!==seq)return false;
+  const samples=b64ToFloat32(data.audio);
+  if(!samples.length)return false;
+  const buf=ctx.createBuffer(1,samples.length,Number(data.sample_rate)||24000);
+  buf.copyToChannel(samples,0);
+  const src=ctx.createBufferSource();
+  src.buffer=buf;
+  src.connect(ctx.destination);
+  currentSource=src;
+  await new Promise((resolve,reject)=>{
+    src.onended=resolve;
+    try{src.start()}catch(e){reject(e)}
+  });
+  if(currentSource===src)currentSource=null;
+  try{src.disconnect()}catch{}
+  return true;
+}
+
+async function requestVoice(text,lang,voice){
+  const r=await fetch(TTS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      text,
+      lang,
+      voice,
+      style:lang==='en-US'
+        ?'Natural American English, very clear, warm, human and conversational. Precise beginner-friendly pronunciation.'
+        :'Português brasileiro natural, humano, claro e conversacional. Fale como professor, sem voz de robô.'
+    })
+  });
+  const raw=await r.text();
+  let data=null;
+  try{data=JSON.parse(raw)}catch{}
+  if(!r.ok)throw new Error(data?.message||data?.error||('HTTP '+r.status));
+  if(!data?.audio)throw new Error('Gemini não devolveu áudio');
+  return data;
+}
+
+async function speakGemini(text,lang,voice){
+  text=cleanText(text);
+  if(!text)return false;
+  stopCurrent();
+  const mySeq=seq;
+  await unlock();
+
+  const key=cacheKey(text,lang,voice);
+  let data=await cached(key);
+
+  if(data){
+    record('cache',data,text);
+    return playPCM(data,mySeq);
+  }
+
+  let job=pending.get(key);
+  if(!job){
+    job=requestVoice(text,lang,voice)
+      .then(async d=>{
+        mem.set(key,d);
+        await dbPut(key,d);
+        return d;
+      })
+      .finally(()=>pending.delete(key));
+    pending.set(key,job);
+  }
+
+  try{
+    data=await job;
+    if(mySeq!==seq)return false;
+    record('api',data,text);
+    return playPCM(data,mySeq);
   }catch(err){
-    console.warn('Kokoro indisponível.',err);
+    console.warn('Gemini TTS 2.0',err);
+    window.dispatchEvent(new CustomEvent('meu-ingles-2-tts-error',{detail:{message:String(err?.message||err)}}));
     return false;
   }
 }
 
-function speakBrowser(text,lang='en-US'){
-  if(!('speechSynthesis' in window))return false;
-  stopAllAudio();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang=lang;
-  u.rate=lang.startsWith('en')?.86:.94;
-  speechSynthesis.speak(u);
-  return true;
+export function speak(text,lang='en-US'){
+  const voice=lang.startsWith('en')?ENGLISH_VOICE.voice:PORTUGUESE_VOICE.voice;
+  return speakGemini(text,lang.startsWith('en')?'en-US':'pt-BR',voice);
 }
 
-export async function speak(text,lang='en-US'){
-  if(!text)return false;
-  if(lang.startsWith('en')){
-    return speakKokoro(text,ENGLISH_VOICE.voice,'heart');
-  }
-  return false;
+export function speakPortuguesePrompt(text){
+  return speakGemini(text,'pt-BR',PORTUGUESE_VOICE.voice);
 }
 
-export async function speakPortugueseDora(text){
-  if(!text)return false;
-  const voice=PROFESSOR_VOICES.doideira;
-  return speakKokoro(text,voice.voice,'alex-question');
+export function stopVoice(){
+  stopCurrent();
+}
+
+export function prepareVoices(){
+  openDb();
+  return Promise.resolve(true);
 }
