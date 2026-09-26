@@ -213,3 +213,21 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 .tokenSpent{background:rgba(157,35,48,.94)}
 .tokenSpent span{color:#ff7a87}
 @media(max-width:420px){.tokenMeters{right:70px}.tokenMeter{min-width:58px;padding:0 7px;font-size:11px}}
+
+
+.auditFull{max-height:88vh;overflow:auto}
+.auditPeriods{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:18px 0}
+.auditPeriod{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
+.auditPeriod small,.auditPeriod span{display:block;color:#aab2c5}
+.auditPeriod b{display:block;font-size:20px;margin:5px 0}
+.auditTitle{margin:22px 0 10px}
+.auditRecentList{display:grid;gap:8px}
+.auditRecent{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.auditRecent>span{min-width:54px;text-align:center;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:950}
+.auditRecent>div{min-width:0;flex:1}
+.auditRecent b,.auditRecent small{display:block}
+.auditRecent b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auditRecent small{font-size:11px;color:#99a2b7;margin-top:3px}
+.auditPaid{background:rgba(165,38,52,.28);color:#ff8792}
+.auditCache{background:rgba(13,125,75,.28);color:#6cf2ad}
+@media(max-width:430px){.auditPeriods{grid-template-columns:1fr 1fr}.auditPeriod{padding:12px}.auditPeriod b{font-size:17px}}
