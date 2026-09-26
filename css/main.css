@@ -175,3 +175,11 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 @media(min-width:620px){
   .voiceGrid{grid-template-columns:repeat(2,1fr)}
 }
+
+
+.audioStatsCard{margin-top:14px;padding:16px}
+.audioStatsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.audioStatsGrid>div{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:11px;text-align:center}
+.audioStatsGrid b{display:block;font-size:20px}
+.audioStatsGrid span{display:block;font-size:11px;color:#a9b0c3;margin-top:3px}
+.audioStatsFoot{font-size:12px;margin-top:10px;line-height:1.45}
