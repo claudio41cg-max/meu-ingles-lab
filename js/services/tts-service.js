@@ -15,6 +15,7 @@ let dbPromise=null;
 let audioCtx=null;
 let currentSource=null;
 let seq=0;
+const SESSION_START=Date.now();
 
 function cleanText(text){
   return String(text||'').replace(/\s+/g,' ').trim();
@@ -104,23 +105,48 @@ function estimate(data,text){
   };
 }
 
+function blankStats(){
+  return {generated:0,cache:0,tokens:0,usd:0,savedTokens:0,savedUsd:0,events:[]};
+}
+
 function loadStats(){
   try{
     const x=JSON.parse(localStorage.getItem(STATS_KEY)||'{}');
-    return {
+    const s={
+      ...blankStats(),
+      ...x,
       generated:Number(x.generated)||0,
       cache:Number(x.cache)||0,
       tokens:Number(x.tokens)||0,
       usd:Number(x.usd)||0,
       savedTokens:Number(x.savedTokens)||0,
-      savedUsd:Number(x.savedUsd)||0
+      savedUsd:Number(x.savedUsd)||0,
+      events:Array.isArray(x.events)?x.events:[]
     };
+    if(!s.events.length&&(s.generated||s.cache)){
+      s.events=[{
+        ts:Date.now(),
+        kind:'legacy',
+        generated:s.generated,
+        cache:s.cache,
+        tokens:s.tokens,
+        usd:s.usd,
+        savedTokens:s.savedTokens,
+        savedUsd:s.savedUsd,
+        seconds:0,
+        savedSeconds:0,
+        text:'Histórico acumulado antes do detalhamento por período'
+      }];
+      try{localStorage.setItem(STATS_KEY,JSON.stringify(s))}catch{}
+    }
+    return s;
   }catch{
-    return {generated:0,cache:0,tokens:0,usd:0,savedTokens:0,savedUsd:0};
+    return blankStats();
   }
 }
 
 function saveStats(s){
+  s.events=(s.events||[]).slice(-3000);
   try{localStorage.setItem(STATS_KEY,JSON.stringify(s))}catch{}
   window.dispatchEvent(new CustomEvent('meu-ingles-2-tts-stats',{detail:s}));
 }
@@ -128,6 +154,19 @@ function saveStats(s){
 function record(kind,data,text){
   const e=estimate(data,text);
   const s=loadStats();
+  const event={
+    ts:Date.now(),
+    kind,
+    text:cleanText(text),
+    model:String(data?.model||DEFAULT_MODEL),
+    voice:String(data?.voice||''),
+    tokens:kind==='api'?e.tokens:0,
+    usd:kind==='api'?e.usd:0,
+    savedTokens:kind==='cache'?e.tokens:0,
+    savedUsd:kind==='cache'?e.usd:0,
+    seconds:kind==='api'?e.seconds:0,
+    savedSeconds:kind==='cache'?e.seconds:0
+  };
   if(kind==='api'){
     s.generated++;
     s.tokens+=e.tokens;
@@ -137,11 +176,59 @@ function record(kind,data,text){
     s.savedTokens+=e.tokens;
     s.savedUsd+=e.usd;
   }
+  s.events.push(event);
   saveStats(s);
 }
 
+function sumPeriod(events){
+  return events.reduce((a,e)=>{
+    if(e.kind==='legacy'){
+      a.generated+=Number(e.generated)||0;
+      a.cache+=Number(e.cache)||0;
+      a.tokens+=Number(e.tokens)||0;
+      a.usd+=Number(e.usd)||0;
+      a.savedTokens+=Number(e.savedTokens)||0;
+      a.savedUsd+=Number(e.savedUsd)||0;
+      a.seconds+=Number(e.seconds)||0;
+      a.savedSeconds+=Number(e.savedSeconds)||0;
+    }else{
+      if(e.kind==='api')a.generated++;
+      if(e.kind==='cache')a.cache++;
+      a.tokens+=Number(e.tokens)||0;
+      a.usd+=Number(e.usd)||0;
+      a.savedTokens+=Number(e.savedTokens)||0;
+      a.savedUsd+=Number(e.savedUsd)||0;
+      a.seconds+=Number(e.seconds)||0;
+      a.savedSeconds+=Number(e.savedSeconds)||0;
+    }
+    return a;
+  },{generated:0,cache:0,tokens:0,usd:0,savedTokens:0,savedUsd:0,seconds:0,savedSeconds:0});
+}
+
+function startDay(d=new Date()){return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()}
+function startMonth(d=new Date()){return new Date(d.getFullYear(),d.getMonth(),1).getTime()}
+
 export function getAudioStats(){
   return loadStats();
+}
+
+export function getAudioReport(){
+  const s=loadStats();
+  const events=s.events||[];
+  const now=new Date();
+  const bySince=ts=>sumPeriod(events.filter(e=>Number(e.ts)>=ts));
+  const recent=events.filter(e=>e.kind==='api'||e.kind==='cache').slice(-30).reverse();
+  return {
+    session:bySince(SESSION_START),
+    today:bySince(startDay(now)),
+    week:bySince(Date.now()-7*864e5),
+    month:bySince(startMonth(now)),
+    all:{
+      generated:s.generated,cache:s.cache,tokens:s.tokens,usd:s.usd,
+      savedTokens:s.savedTokens,savedUsd:s.savedUsd
+    },
+    recent
+  };
 }
 
 function ensureCtx(){
