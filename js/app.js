@@ -128,9 +128,16 @@ function renderStep(){
   }
   bindNav();
 }
+function answerLanguage(value){
+  const s=String(value||'');
+  const looksPt=/[áéíóúâêôãõç]/i.test(s)||/\b(oi|olá|obrigado|obrigada|tchau|até|você|como|qual|nome|estou|bem|sim|não|e|onde)\b/i.test(s);
+  return looksPt?'pt-BR':'en-US';
+}
+
 function answer(button,value,st){
   if(session.locked)return;session.locked=true;
   const ok=value===st.answer;button.classList.add(ok?'good':'bad');
+  if(ok)speak(value,answerLanguage(value));
   document.querySelectorAll('.choice').forEach(b=>{if(b.textContent===st.answer)b.classList.add('good');b.disabled=true});
   document.querySelector('#feedback').innerHTML='<div class="card" style="padding:14px;margin-top:8px">'+(ok?'Muito bem!':'Quase. Veja a resposta correta e fixe a ideia.')+'</div>'+controls();
   bindNav();
