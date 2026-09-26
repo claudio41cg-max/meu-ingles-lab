@@ -1,7 +1,7 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=8';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=9';
 import {renderVoiceLab} from './ui/voice-lab.js?v=8';
 
 const root=document.querySelector('#app');
@@ -61,7 +61,7 @@ function audioStatsMarkup(){
   const s=getAudioStats();
   const total=s.generated+s.cache;
   const rate=total?Math.round((s.cache/total)*100):0;
-  return '<article class="card audioStatsCard"><div class="eyebrow">Áudio Gemini 2.5</div>'+
+  return '<article class="card audioStatsCard"><div class="eyebrow">Áudio Gemini 3.8 Flash-Lite</div>'+
     '<div class="audioStatsGrid"><div><b>'+s.generated+'</b><span>gerados IA</span></div><div><b>'+s.cache+'</b><span>do cache</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
     '<div class="muted audioStatsFoot">'+Math.round(s.tokens).toLocaleString('pt-BR')+' tokens cobrados · US$ '+s.usd.toFixed(4).replace('.',',')+' · economizado US$ '+s.savedUsd.toFixed(4).replace('.',',')+'</div></article>';
 }
