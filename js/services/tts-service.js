@@ -1,3 +1,13 @@
+export const PROFESSOR_VOICES={
+  tranquilo:{provider:'kokoro',voice:'pf_dora',name:'Dora',lang:'pt-BR'},
+  doideira:{provider:'kokoro',voice:'pm_alex',name:'Alex',lang:'pt-BR'},
+  hard:{provider:'kokoro',voice:'pm_santa',name:'Santa',lang:'pt-BR'}
+};
+
+export function getProfessorVoice(professor){
+  return PROFESSOR_VOICES[professor]||PROFESSOR_VOICES.tranquilo;
+}
+
 const memory=new Map();
 export function speak(text,lang='en-US'){
  const key=lang+'|'+text;
