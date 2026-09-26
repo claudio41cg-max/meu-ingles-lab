@@ -164,13 +164,23 @@ function answerLanguage(value){
   return looksPt?'pt-BR':'en-US';
 }
 
+async function playAnswerFeedback(ok,value,st){
+  if(ok){
+    await speak(value,answerLanguage(value));
+    await speakPortuguesePrompt('Muito bem!');
+    return;
+  }
+  await speakPortuguesePrompt('Quase. A resposta correta é.');
+  await speak(st.answer,answerLanguage(st.answer));
+}
+
 function answer(button,value,st){
   if(session.locked)return;session.locked=true;
   const ok=value===st.answer;button.classList.add(ok?'good':'bad');
-  if(ok)speak(value,answerLanguage(value));
   document.querySelectorAll('.choice').forEach(b=>{if(b.textContent===st.answer)b.classList.add('good');b.disabled=true});
   document.querySelector('#feedback').innerHTML='<div class="card" style="padding:14px;margin-top:8px">'+(ok?'Muito bem!':'Quase. Veja a resposta correta e fixe a ideia.')+'</div>'+controls();
   bindNav();
+  playAnswerFeedback(ok,value,st);
 }
 function bindNav(){
   const n=document.querySelector('#next');if(n)n.onclick=next;
