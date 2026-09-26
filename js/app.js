@@ -14,7 +14,7 @@ function home(){
   const p=moduleProgress(first);
   root.innerHTML=
     '<section>'+
-    '<div class="top"><div class="brand">Meu Inglês <span class="muted">2.0</span></div><span class="tag">LAB</span></div>'+
+    '<div class="top"><div class="brand">Meu Inglês <span class="muted">2.0</span></div><div class="topTools"><button class="topCounter" id="ttsCounter" title="Áudios e cache">🔊 <span id="ttsCounterValue">0</span></button><span class="tag">LAB</span></div></div>'+
     '<div class="hero"><div class="eyebrow">Seu caminho até falar inglês</div><h1>Olá, '+s.name+'.<br>Vamos continuar?</h1><p class="muted">Do zero à conversação, uma etapa de cada vez.</p></div>'+
     '<article class="card continue"><div class="eyebrow">Continuar</div><h2>'+first.title+'</h2><p class="muted">'+first.subtitle+'</p>'+
     '<div class="progress"><span style="width:'+p+'%"></span></div><p class="muted">'+p+'% do módulo</p><button class="primary" id="continue">Continuar →</button></article>'+
@@ -23,10 +23,16 @@ function home(){
       '<article class="card tile"><div>🧠</div><b>Praticar</b><span class="muted">Revisão inteligente</span></article>'+
       '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Kokoro · teste gratuito</span></article>'+
       '<article class="card tile"><div>🎮</div><b>Explorar</b><span class="muted">Games e extras</span></article>'+
-    '</div>'+audioStatsMarkup()+'</section>';
+    '</div></section>'+audioStatsModalMarkup();
   document.querySelector('#continue').onclick=()=>openModule(first.id);
   document.querySelector('#course').onclick=openCourse;
   document.querySelector('#voiceLab').onclick=()=>renderVoiceLab(root,{back:home});
+  const ttsCounter=document.querySelector('#ttsCounter');
+  if(ttsCounter)ttsCounter.onclick=()=>document.querySelector('#audioStatsModal')?.classList.add('open');
+  const modalClose=document.querySelector('#audioStatsClose');
+  if(modalClose)modalClose.onclick=()=>document.querySelector('#audioStatsModal')?.classList.remove('open');
+  const modal=document.querySelector('#audioStatsModal');
+  if(modal)modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
 }
 function openCourse(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div><div class="eyebrow">Curso principal</div><h2 style="margin:2px 0">Pre-A1 · Começando do zero</h2></div></div><div class="list" id="mods"></div></section>';
@@ -57,13 +63,26 @@ function isPortuguesePrompt(text){
   return /[áéíóúâêôãõç]/.test(s)||/\b(agora|qual|fale|escute|escolha|você|responda|pergunte|significa|cumprimento|expressão|robô|disse|combina|indo|embora|manhã|tarde|noite)\b/.test(s);
 }
 
-function audioStatsMarkup(){
+function audioStatsModalMarkup(){
   const s=getAudioStats();
   const total=s.generated+s.cache;
   const rate=total?Math.round((s.cache/total)*100):0;
-  return '<article class="card audioStatsCard"><div class="eyebrow">Áudio Gemini 3.8 Flash-Lite</div>'+
-    '<div class="audioStatsGrid"><div><b>'+s.generated+'</b><span>gerados IA</span></div><div><b>'+s.cache+'</b><span>do cache</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
-    '<div class="muted audioStatsFoot">'+Math.round(s.tokens).toLocaleString('pt-BR')+' tokens cobrados · US$ '+s.usd.toFixed(4).replace('.',',')+' · economizado US$ '+s.savedUsd.toFixed(4).replace('.',',')+'</div></article>';
+  queueMicrotask(()=>{
+    const n=document.querySelector('#ttsCounterValue');
+    if(n)n.textContent=String(total);
+  });
+  return '<div class="audioStatsModal" id="audioStatsModal">'+
+    '<div class="audioStatsDialog">'+
+      '<div class="audioStatsHead"><div><div class="eyebrow">Áudio Gemini 3.8 Flash-Lite</div><h2>Uso de voz e cache</h2></div><button id="audioStatsClose" class="audioStatsClose">×</button></div>'+
+      '<div class="audioStatsGrid"><div><b>'+s.generated+'</b><span>gerados IA</span></div><div><b>'+s.cache+'</b><span>do cache</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
+      '<div class="audioStatsRows">'+
+        '<div><span>Tokens cobrados</span><b>'+Math.round(s.tokens).toLocaleString('pt-BR')+'</b></div>'+
+        '<div><span>Gasto estimado</span><b>US$ '+s.usd.toFixed(4).replace('.',',')+'</b></div>'+
+        '<div><span>Tokens evitados</span><b>'+Math.round(s.savedTokens).toLocaleString('pt-BR')+'</b></div>'+
+        '<div><span>Economia estimada</span><b>US$ '+s.savedUsd.toFixed(4).replace('.',',')+'</b></div>'+
+      '</div>'+
+      '<p class="muted audioStatsFoot">A primeira geração pode usar a API. Depois, a mesma frase + voz + idioma + modelo é reutilizada do cache deste aparelho.</p>'+
+    '</div></div>';
 }
 
 function controls(){
