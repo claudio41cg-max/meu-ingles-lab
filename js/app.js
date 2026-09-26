@@ -1,8 +1,8 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak} from './services/tts-service.js';
-import {renderVoiceLab} from './ui/voice-lab.js?v=2';
+import {speak,speakPortugueseDora} from './services/tts-service.js?v=3';
+import {renderVoiceLab} from './ui/voice-lab.js?v=3';
 
 const root=document.querySelector('#app');
 let session=null;
@@ -72,6 +72,7 @@ function renderStep(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div style="flex:1"><div class="eyebrow">'+session.module.title+'</div><div class="progress"><span style="width:'+pct+'%"></span></div></div></div><article class="card stage">'+body+'</article></section>';
   document.querySelector('#back').onclick=()=>openModule(session.module.id);
   const listen=document.querySelector('#listen');if(listen)listen.onclick=()=>speak(st.audio||st.en||st.target||'');
+  if(st.prompt) speakPortugueseDora(st.prompt);
   if(st.options){
     const choices=document.querySelector('#choices');
     st.options.forEach(o=>{const b=document.createElement('button');b.className='choice';b.textContent=o;b.onclick=()=>answer(b,o,st);choices.appendChild(b)});
