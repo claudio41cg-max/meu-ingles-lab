@@ -1,7 +1,7 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortugueseDora,prepareVoices} from './services/tts-service.js?v=6';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=7';
 import {renderVoiceLab} from './ui/voice-lab.js?v=3';
 
 const root=document.querySelector('#app');
@@ -23,7 +23,7 @@ function home(){
       '<article class="card tile"><div>🧠</div><b>Praticar</b><span class="muted">Revisão inteligente</span></article>'+
       '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Kokoro · teste gratuito</span></article>'+
       '<article class="card tile"><div>🎮</div><b>Explorar</b><span class="muted">Games e extras</span></article>'+
-    '</div></section>';
+    '</div>'+audioStatsMarkup()+'</section>';
   document.querySelector('#continue').onclick=()=>openModule(first.id);
   document.querySelector('#course').onclick=openCourse;
   document.querySelector('#voiceLab').onclick=()=>renderVoiceLab(root,{back:home});
@@ -52,6 +52,20 @@ function openModule(id){
   });
 }
 function startLesson(module,lesson){session={module,lesson,index:0,locked:false};renderStep()}
+function isPortuguesePrompt(text){
+  const s=String(text||'').toLowerCase();
+  return /[áéíóúâêôãõç]/.test(s)||/\b(agora|qual|fale|escute|escolha|você|responda|pergunte|significa|cumprimento|expressão|robô|disse|combina|indo|embora|manhã|tarde|noite)\b/.test(s);
+}
+
+function audioStatsMarkup(){
+  const s=getAudioStats();
+  const total=s.generated+s.cache;
+  const rate=total?Math.round((s.cache/total)*100):0;
+  return '<article class="card audioStatsCard"><div class="eyebrow">Áudio Gemini 2.5</div>'+
+    '<div class="audioStatsGrid"><div><b>'+s.generated+'</b><span>gerados IA</span></div><div><b>'+s.cache+'</b><span>do cache</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
+    '<div class="muted audioStatsFoot">'+Math.round(s.tokens).toLocaleString('pt-BR')+' tokens cobrados · US$ '+s.usd.toFixed(4).replace('.',',')+' · economizado US$ '+s.savedUsd.toFixed(4).replace('.',',')+'</div></article>';
+}
+
 function controls(){
   let h='<div class="actions"><button class="primary" id="next">Continuar</button>';
   if(session.index>0)h+='<button class="secondary" id="prev">‹ Voltar uma etapa</button>';
@@ -73,7 +87,7 @@ function renderStep(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div style="flex:1"><div class="eyebrow">'+session.module.title+'</div><div class="progress"><span style="width:'+pct+'%"></span></div></div></div><article class="card stage">'+body+'</article></section>';
   document.querySelector('#back').onclick=()=>openModule(session.module.id);
   const listen=document.querySelector('#listen');if(listen)listen.onclick=()=>speak(st.audio||st.en||st.target||'');
-  if(st.prompt) speakPortugueseDora(st.prompt);
+  if(st.prompt&&isPortuguesePrompt(st.prompt)) speakPortuguesePrompt(st.prompt);
   if(st.options){
     const choices=document.querySelector('#choices');
     st.options.forEach(o=>{const b=document.createElement('button');b.className='choice';b.textContent=o;b.onclick=()=>answer(b,o,st);choices.appendChild(b)});
