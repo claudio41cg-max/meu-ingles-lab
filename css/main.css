@@ -205,11 +205,11 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 .audioStatsRows span{color:#aab2c5}
 
 
-.tokenMeters{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;z-index:1400;display:flex;gap:6px;pointer-events:auto}
+.tokenMeters{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:78px;z-index:1400;display:flex;gap:6px;pointer-events:auto}
 .tokenMeter{height:34px;min-width:64px;padding:0 9px;border-radius:12px;border:1px solid rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:950;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(8px)}
 .tokenMeter b{font-variant-numeric:tabular-nums}
 .tokenSaved{background:rgba(10,122,72,.92)}
 .tokenSaved span{color:#62f3a5}
 .tokenSpent{background:rgba(157,35,48,.94)}
 .tokenSpent span{color:#ff7a87}
-@media(max-width:420px){.tokenMeters{right:8px}.tokenMeter{min-width:58px;padding:0 7px;font-size:11px}}
+@media(max-width:420px){.tokenMeters{right:70px}.tokenMeter{min-width:58px;padding:0 7px;font-size:11px}}
