@@ -1,7 +1,7 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=11';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats,getAudioReport} from './services/tts-service.js?v=15';
 import {renderVoiceLab} from './ui/voice-lab.js?v=10';
 
 const root=document.querySelector('#app');
@@ -17,6 +17,18 @@ function installTokenMeters(){
   wrap.className='tokenMeters';
   wrap.innerHTML='<button class="tokenMeter tokenSaved" id="tokenSaved" title="Tokens economizados pelo cache"><span>●</span><b>0</b></button><button class="tokenMeter tokenSpent" id="tokenSpent" title="Tokens cobrados pela IA"><span>●</span><b>0</b></button>';
   document.body.appendChild(wrap);
+
+  const modal=document.createElement('div');
+  modal.id='tokenAuditModal';
+  modal.className='audioStatsModal';
+  document.body.appendChild(modal);
+
+  const openAudit=()=>{renderTokenAudit();modal.classList.add('open')};
+  wrap.querySelectorAll('button').forEach(b=>b.onclick=openAudit);
+  modal.addEventListener('click',e=>{
+    if(e.target===modal||e.target.closest('#tokenAuditClose'))modal.classList.remove('open');
+  });
+
   refreshTokenMeters(getAudioStats());
 }
 
@@ -25,6 +37,42 @@ function refreshTokenMeters(s=getAudioStats()){
   const spent=document.querySelector('#tokenSpent b');
   if(saved)saved.textContent=formatTokenCount(s.savedTokens);
   if(spent)spent.textContent=formatTokenCount(s.tokens);
+  if(document.getElementById('tokenAuditModal')?.classList.contains('open'))renderTokenAudit();
+}
+
+function fmtUsd(n){return 'US$ '+(Number(n)||0).toFixed(4).replace('.',',')}
+function fmtMin(sec){return ((Number(sec)||0)/60).toFixed(1).replace('.',',')+' min'}
+function periodCard(label,p){
+  const total=(p.generated||0)+(p.cache||0);
+  const rate=total?Math.round((p.cache/total)*100):0;
+  return '<div class="auditPeriod"><small>'+label+'</small><b>'+fmtUsd(p.usd)+'</b><span>'+formatTokenCount(p.tokens)+' tokens · '+rate+'% cache</span></div>';
+}
+function renderTokenAudit(){
+  const modal=document.getElementById('tokenAuditModal');
+  if(!modal)return;
+  const r=getAudioReport();
+  const t=r.today;
+  const totalToday=(t.generated||0)+(t.cache||0);
+  const rate=totalToday?Math.round((t.cache/totalToday)*100):0;
+  const recent=(r.recent||[]).map(e=>
+    '<div class="auditRecent"><span class="'+(e.kind==='api'?'auditPaid':'auditCache')+'">'+(e.kind==='api'?'IA':'CACHE')+'</span>'+
+    '<div><b>'+String(e.text||'Áudio').slice(0,58)+'</b><small>'+new Date(e.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+(e.kind==='api'?fmtUsd(e.usd):'economizou '+fmtUsd(e.savedUsd))+'</small></div></div>'
+  ).join('');
+  modal.innerHTML='<div class="audioStatsDialog auditFull">'+
+    '<div class="audioStatsHead"><div><div class="eyebrow">Gemini 3.8 Flash-Lite</div><h2>Consumo de voz</h2></div><button id="tokenAuditClose" class="audioStatsClose">×</button></div>'+
+    '<div class="auditPeriods">'+periodCard('Sessão atual',r.session)+periodCard('Hoje',r.today)+periodCard('Últimos 7 dias',r.week)+periodCard('Mês atual',r.month)+'</div>'+
+    '<div class="audioStatsGrid"><div><b>'+t.generated+'</b><span>gerados IA hoje</span></div><div><b>'+t.cache+'</b><span>do cache hoje</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
+    '<div class="audioStatsRows">'+
+      '<div><span>Tokens cobrados hoje</span><b>'+formatTokenCount(t.tokens)+'</b></div>'+
+      '<div><span>Tokens evitados hoje</span><b>'+formatTokenCount(t.savedTokens)+'</b></div>'+
+      '<div><span>Gasto de hoje</span><b>'+fmtUsd(t.usd)+'</b></div>'+
+      '<div><span>Economia de hoje</span><b>'+fmtUsd(t.savedUsd)+'</b></div>'+
+      '<div><span>Voz gerada pela IA</span><b>'+fmtMin(t.seconds)+'</b></div>'+
+      '<div><span>Voz reaproveitada</span><b>'+fmtMin(t.savedSeconds)+'</b></div>'+
+    '</div>'+
+    '<h3 class="auditTitle">Áudios recentes</h3><div class="auditRecentList">'+(recent||'<p class="muted">Ainda não há áudio registrado.</p>')+'</div>'+
+    '<p class="muted audioStatsFoot">Os botões do protótipo mostram o acumulado. Este painel separa sessão, hoje, 7 dias e mês usando a data e hora de cada reprodução.</p>'+
+  '</div>';
 }
 
 window.addEventListener('meu-ingles-2-tts-stats',e=>refreshTokenMeters(e.detail));
@@ -44,14 +92,10 @@ function home(){
       '<article class="card tile"><div>🧠</div><b>Praticar</b><span class="muted">Revisão inteligente</span></article>'+
       '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Kokoro · teste gratuito</span></article>'+
       '<article class="card tile"><div>🎮</div><b>Explorar</b><span class="muted">Games e extras</span></article>'+
-    '</div></section>'+audioStatsModalMarkup();
+    '</div></section>';
   document.querySelector('#continue').onclick=()=>openModule(first.id);
   document.querySelector('#course').onclick=openCourse;
   document.querySelector('#voiceLab').onclick=()=>renderVoiceLab(root,{back:home});
-  const modalClose=document.querySelector('#audioStatsClose');
-  if(modalClose)modalClose.onclick=()=>document.querySelector('#audioStatsModal')?.classList.remove('open');
-  const modal=document.querySelector('#audioStatsModal');
-  if(modal)modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
 }
 function openCourse(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div><div class="eyebrow">Curso principal</div><h2 style="margin:2px 0">Pre-A1 · Começando do zero</h2></div></div><div class="list" id="mods"></div></section>';
@@ -80,24 +124,6 @@ function startLesson(module,lesson){session={module,lesson,index:0,locked:false}
 function isPortuguesePrompt(text){
   const s=String(text||'').toLowerCase();
   return /[áéíóúâêôãõç]/.test(s)||/\b(agora|qual|fale|escute|escolha|você|responda|pergunte|significa|cumprimento|expressão|robô|disse|combina|indo|embora|manhã|tarde|noite)\b/.test(s);
-}
-
-function audioStatsModalMarkup(){
-  const s=getAudioStats();
-  const total=s.generated+s.cache;
-  const rate=total?Math.round((s.cache/total)*100):0;
-  return '<div class="audioStatsModal" id="audioStatsModal">'+
-    '<div class="audioStatsDialog">'+
-      '<div class="audioStatsHead"><div><div class="eyebrow">Áudio Gemini 3.8 Flash-Lite</div><h2>Uso de voz e cache</h2></div><button id="audioStatsClose" class="audioStatsClose">×</button></div>'+
-      '<div class="audioStatsGrid"><div><b>'+s.generated+'</b><span>gerados IA</span></div><div><b>'+s.cache+'</b><span>do cache</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
-      '<div class="audioStatsRows">'+
-        '<div><span>Tokens cobrados</span><b>'+Math.round(s.tokens).toLocaleString('pt-BR')+'</b></div>'+
-        '<div><span>Gasto estimado</span><b>US$ '+s.usd.toFixed(4).replace('.',',')+'</b></div>'+
-        '<div><span>Tokens evitados</span><b>'+Math.round(s.savedTokens).toLocaleString('pt-BR')+'</b></div>'+
-        '<div><span>Economia estimada</span><b>US$ '+s.savedUsd.toFixed(4).replace('.',',')+'</b></div>'+
-      '</div>'+
-      '<p class="muted audioStatsFoot">A primeira geração pode usar a API. Depois, a mesma frase + voz + idioma + modelo é reutilizada do cache deste aparelho.</p>'+
-    '</div></div>';
 }
 
 function controls(){
