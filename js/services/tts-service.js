@@ -1,4 +1,4 @@
-export const ENGLISH_VOICE={provider:'kokoro',voice:'af_bella',name:'Bella',lang:'en-US'};
+export const ENGLISH_VOICE={provider:'kokoro',voice:'af_heart',name:'Heart',lang:'en-US'};
 
 export const PROFESSOR_VOICES={
   tranquilo:{provider:'kokoro',voice:'pf_dora',name:'Dora',lang:'pt-BR'},
@@ -72,7 +72,7 @@ export async function speak(text,lang='en-US'){
 
 export async function speakPortugueseDora(text){
   if(!text)return false;
-  const voice=PROFESSOR_VOICES.tranquilo;
-  const ok=await speakKokoro(text,voice.voice,'dora');
+  const voice=PROFESSOR_VOICES.doideira;
+  const ok=await speakKokoro(text,voice.voice,'alex-question');
   return ok||speakBrowser(text,'pt-BR');
 }
