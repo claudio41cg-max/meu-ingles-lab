@@ -2,7 +2,7 @@ import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
 import {speak} from './services/tts-service.js';
-import {renderVoiceLab} from './ui/voice-lab.js';
+import {renderVoiceLab} from './ui/voice-lab.js?v=2';
 
 const root=document.querySelector('#app');
 let session=null;
