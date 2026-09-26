@@ -1,3 +1,5 @@
+export const ENGLISH_VOICE={provider:'kokoro',voice:'af_bella',name:'Bella',lang:'en-US'};
+
 export const PROFESSOR_VOICES={
   tranquilo:{provider:'kokoro',voice:'pf_dora',name:'Dora',lang:'pt-BR'},
   doideira:{provider:'kokoro',voice:'pm_alex',name:'Alex',lang:'pt-BR'},
