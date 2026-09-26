@@ -2,6 +2,7 @@ const TTS_URL='https://meu-ingles-livid.vercel.app/api/gemini-tts';
 const DB_NAME='meuIngles2TTSCacheV1';
 const STORE='voices';
 const STATS_KEY='meuIngles2TTSStatsV1';
+const CACHE_SCHEMA='v2-exact-transcript';
 const DEFAULT_MODEL='gemini-3.8-flash-lite-tts';
 const FALLBACK_MODEL='gemini-2.5-flash-preview-tts';
 
@@ -20,7 +21,7 @@ function cleanText(text){
 }
 
 function cacheKey(text,lang,voice,model=DEFAULT_MODEL){
-  return [model,voice,lang,cleanText(text)].join('|');
+  return [CACHE_SCHEMA,model,voice,lang,cleanText(text)].join('|');
 }
 
 function openDb(){
