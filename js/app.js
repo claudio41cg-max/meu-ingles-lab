@@ -2,6 +2,7 @@ import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
 import {speak} from './services/tts-service.js';
+import {renderVoiceLab} from './ui/voice-lab.js';
 
 const root=document.querySelector('#app');
 let session=null;
@@ -19,11 +20,12 @@ function home(){
     '<div class="grid">'+
       '<article class="card tile" id="course"><div>📚</div><b>Curso principal</b><span class="muted">Pre-A1 → C1</span></article>'+
       '<article class="card tile"><div>🧠</div><b>Praticar</b><span class="muted">Revisão inteligente</span></article>'+
-      '<article class="card tile"><div>✨</div><b>Conversar IA</b><span class="muted">Em breve</span></article>'+
+      '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Kokoro · teste gratuito</span></article>'+
       '<article class="card tile"><div>🎮</div><b>Explorar</b><span class="muted">Games e extras</span></article>'+
     '</div></section>';
   document.querySelector('#continue').onclick=()=>openModule(first.id);
   document.querySelector('#course').onclick=openCourse;
+  document.querySelector('#voiceLab').onclick=()=>renderVoiceLab(root,{back:home});
 }
 function openCourse(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div><div class="eyebrow">Curso principal</div><h2 style="margin:2px 0">Pre-A1 · Começando do zero</h2></div></div><div class="list" id="mods"></div></section>';
