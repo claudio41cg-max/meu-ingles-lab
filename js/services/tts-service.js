@@ -2,6 +2,7 @@ const TTS_URL='https://meu-ingles-livid.vercel.app/api/gemini-tts';
 const DB_NAME='meuIngles2TTSCacheV1';
 const STORE='voices';
 const STATS_KEY='meuIngles2TTSStatsV1';
+const DEFAULT_MODEL='gemini-2.5-flash-preview-tts';
 
 export const ENGLISH_VOICE={provider:'gemini-2.5',voice:'Achird',name:'Achird',lang:'en-US'};
 export const PORTUGUESE_VOICE={provider:'gemini-2.5',voice:'Aoede',name:'Aoede',lang:'pt-BR'};
@@ -17,8 +18,8 @@ function cleanText(text){
   return String(text||'').replace(/\s+/g,' ').trim();
 }
 
-function cacheKey(text,lang,voice){
-  return [voice,lang,cleanText(text)].join('|');
+function cacheKey(text,lang,voice,model=DEFAULT_MODEL){
+  return [model,voice,lang,cleanText(text)].join('|');
 }
 
 function openDb(){
@@ -197,7 +198,7 @@ async function playPCM(data,mySeq){
   return true;
 }
 
-async function requestVoice(text,lang,voice){
+async function requestVoice(text,lang,voice,model=DEFAULT_MODEL){
   const r=await fetch(TTS_URL,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -205,6 +206,7 @@ async function requestVoice(text,lang,voice){
       text,
       lang,
       voice,
+      model,
       style:lang==='en-US'
         ?'Natural American English, very clear, warm, human and conversational. Precise beginner-friendly pronunciation.'
         :'Português brasileiro natural, humano, claro e conversacional. Fale como professor, sem voz de robô.'
@@ -218,14 +220,14 @@ async function requestVoice(text,lang,voice){
   return data;
 }
 
-async function speakGemini(text,lang,voice){
+async function speakGemini(text,lang,voice,model=DEFAULT_MODEL){
   text=cleanText(text);
   if(!text)return false;
   stopCurrent();
   const mySeq=seq;
   await unlock();
 
-  const key=cacheKey(text,lang,voice);
+  const key=cacheKey(text,lang,voice,model);
   let data=await cached(key);
 
   if(data){
@@ -235,7 +237,7 @@ async function speakGemini(text,lang,voice){
 
   let job=pending.get(key);
   if(!job){
-    job=requestVoice(text,lang,voice)
+    job=requestVoice(text,lang,voice,model)
       .then(async d=>{
         mem.set(key,d);
         await dbPut(key,d);
@@ -259,11 +261,11 @@ async function speakGemini(text,lang,voice){
 
 export function speak(text,lang='en-US'){
   const voice=lang.startsWith('en')?ENGLISH_VOICE.voice:PORTUGUESE_VOICE.voice;
-  return speakGemini(text,lang.startsWith('en')?'en-US':'pt-BR',voice);
+  return speakGemini(text,lang.startsWith('en')?'en-US':'pt-BR',voice,DEFAULT_MODEL);
 }
 
 export function speakPortuguesePrompt(text){
-  return speakGemini(text,'pt-BR',PORTUGUESE_VOICE.voice);
+  return speakGemini(text,'pt-BR',PORTUGUESE_VOICE.voice,DEFAULT_MODEL);
 }
 
 export function stopVoice(){
@@ -273,4 +275,12 @@ export function stopVoice(){
 export function prepareVoices(){
   openDb();
   return Promise.resolve(true);
+}
+
+
+export async function previewGeminiModel({text,lang='pt-BR',voice,model}){
+  const useLang=String(lang).toLowerCase().startsWith('en')?'en-US':'pt-BR';
+  const useVoice=voice||(useLang==='en-US'?ENGLISH_VOICE.voice:PORTUGUESE_VOICE.voice);
+  const useModel=model||DEFAULT_MODEL;
+  return speakGemini(text,useLang,useVoice,useModel);
 }
