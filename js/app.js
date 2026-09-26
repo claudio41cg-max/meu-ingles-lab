@@ -1,8 +1,8 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=7';
-import {renderVoiceLab} from './ui/voice-lab.js?v=3';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=8';
+import {renderVoiceLab} from './ui/voice-lab.js?v=8';
 
 const root=document.querySelector('#app');
 prepareVoices();
