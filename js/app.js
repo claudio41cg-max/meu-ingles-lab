@@ -1,12 +1,36 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=10';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats} from './services/tts-service.js?v=11';
 import {renderVoiceLab} from './ui/voice-lab.js?v=10';
 
 const root=document.querySelector('#app');
 prepareVoices();
 let session=null;
+
+function formatTokenCount(n){return Math.round(Number(n)||0).toLocaleString('pt-BR')}
+
+function installTokenMeters(){
+  if(document.getElementById('tokenMeters'))return;
+  const wrap=document.createElement('div');
+  wrap.id='tokenMeters';
+  wrap.className='tokenMeters';
+  wrap.innerHTML='<button class="tokenMeter tokenSaved" id="tokenSaved" title="Tokens economizados pelo cache"><span>●</span><b>0</b></button><button class="tokenMeter tokenSpent" id="tokenSpent" title="Tokens cobrados pela IA"><span>●</span><b>0</b></button>';
+  document.body.appendChild(wrap);
+  const openDetails=()=>{if(root.querySelector('#audioStatsModal'))root.querySelector('#audioStatsModal').classList.add('open');else{installTokenMeters();
+home();queueMicrotask(()=>root.querySelector('#audioStatsModal')?.classList.add('open'));}};
+  wrap.querySelectorAll('button').forEach(b=>b.onclick=openDetails);
+  refreshTokenMeters(getAudioStats());
+}
+
+function refreshTokenMeters(s=getAudioStats()){
+  const saved=document.querySelector('#tokenSaved b');
+  const spent=document.querySelector('#tokenSpent b');
+  if(saved)saved.textContent=formatTokenCount(s.savedTokens);
+  if(spent)spent.textContent=formatTokenCount(s.tokens);
+}
+
+window.addEventListener('meu-ingles-2-tts-stats',e=>refreshTokenMeters(e.detail));
 
 function home(){
   const s=getState();
