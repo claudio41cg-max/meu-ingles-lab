@@ -156,3 +156,22 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
   .stage{min-height:510px;padding:18px}
   .professorSelector{grid-template-columns:1fr}
 }
+
+
+/* Laboratório de vozes */
+.voiceLabIntro,.voiceNote{padding:18px;margin-bottom:18px}
+.voiceLabIntro p,.voiceNote p{margin:8px 0 0}
+.voiceGrid{display:grid;grid-template-columns:1fr;gap:12px}
+.voiceCard{padding:16px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.voiceName{font-size:19px;font-weight:950}
+.voiceId{margin-top:5px;font-size:12px;color:#8177d8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.voicePlay{
+  border:1px solid #665bd1;
+  background:linear-gradient(180deg,#312a6b,#242052);
+  color:#fff;border-radius:15px;padding:11px 14px;
+  min-width:112px;font-weight:900
+}
+.voicePlay:active{transform:scale(.98)}
+@media(min-width:620px){
+  .voiceGrid{grid-template-columns:repeat(2,1fr)}
+}
