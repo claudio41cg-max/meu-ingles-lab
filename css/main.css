@@ -189,3 +189,17 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 .compareBlock{margin-top:16px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
 .compareButtons{display:flex;gap:10px;margin:10px 0 8px}
 .compareButtons .voicePlay{flex:1}
+
+
+.topTools{display:flex;align-items:center;gap:10px}
+.topCounter{border:1px solid rgba(139,124,255,.45);background:#17223a;color:#fff;border-radius:16px;padding:9px 12px;font-weight:900;display:flex;align-items:center;gap:6px}
+.topCounter span{font-variant-numeric:tabular-nums}
+.audioStatsModal{position:fixed;inset:0;background:rgba(2,6,23,.72);display:none;align-items:flex-end;justify-content:center;z-index:1000;padding:14px}
+.audioStatsModal.open{display:flex}
+.audioStatsDialog{width:min(100%,560px);background:#101a30;border:1px solid rgba(124,105,255,.6);border-radius:26px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.audioStatsHead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.audioStatsHead h2{margin:4px 0 0}
+.audioStatsClose{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:transparent;color:#fff;font-size:28px}
+.audioStatsRows{margin-top:18px;border-top:1px solid rgba(255,255,255,.09)}
+.audioStatsRows>div{display:flex;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.audioStatsRows span{color:#aab2c5}
