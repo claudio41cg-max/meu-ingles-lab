@@ -27,8 +27,8 @@ async function getKokoro(){
   return kokoroPromise;
 }
 
-async function speakBella(text){
-  const key='bella|'+text;
+async function speakKokoro(text,voiceId,cachePrefix){
+  const key=cachePrefix+'|'+text;
   try{
     if(activeAudio){
       activeAudio.pause();
@@ -37,7 +37,7 @@ async function speakBella(text){
     let url=memory.get(key);
     if(!url){
       const tts=await getKokoro();
-      const raw=await tts.generate(text,{voice:ENGLISH_VOICE.voice});
+      const raw=await tts.generate(text,{voice:voiceId});
       const blob=raw.toBlob();
       url=URL.createObjectURL(blob);
       memory.set(key,url);
@@ -46,8 +46,8 @@ async function speakBella(text){
     await activeAudio.play();
     return true;
   }catch(err){
-    console.warn('Bella/Kokoro indisponível, usando voz do navegador.',err);
-    return speakBrowser(text,'en-US');
+    console.warn('Kokoro indisponível, usando voz do navegador.',err);
+    return false;
   }
 }
 
@@ -63,6 +63,16 @@ function speakBrowser(text,lang='en-US'){
 
 export async function speak(text,lang='en-US'){
   if(!text)return false;
-  if(lang.startsWith('en'))return speakBella(text);
+  if(lang.startsWith('en')){
+    const ok=await speakKokoro(text,ENGLISH_VOICE.voice,'bella');
+    return ok||speakBrowser(text,'en-US');
+  }
   return speakBrowser(text,lang);
+}
+
+export async function speakPortugueseDora(text){
+  if(!text)return false;
+  const voice=PROFESSOR_VOICES.tranquilo;
+  const ok=await speakKokoro(text,voice.voice,'dora');
+  return ok||speakBrowser(text,'pt-BR');
 }
