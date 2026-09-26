@@ -17,9 +17,6 @@ function installTokenMeters(){
   wrap.className='tokenMeters';
   wrap.innerHTML='<button class="tokenMeter tokenSaved" id="tokenSaved" title="Tokens economizados pelo cache"><span>●</span><b>0</b></button><button class="tokenMeter tokenSpent" id="tokenSpent" title="Tokens cobrados pela IA"><span>●</span><b>0</b></button>';
   document.body.appendChild(wrap);
-  const openDetails=()=>{if(root.querySelector('#audioStatsModal'))root.querySelector('#audioStatsModal').classList.add('open');else{installTokenMeters();
-home();queueMicrotask(()=>root.querySelector('#audioStatsModal')?.classList.add('open'));}};
-  wrap.querySelectorAll('button').forEach(b=>b.onclick=openDetails);
   refreshTokenMeters(getAudioStats());
 }
 
@@ -38,7 +35,7 @@ function home(){
   const p=moduleProgress(first);
   root.innerHTML=
     '<section>'+
-    '<div class="top"><div class="brand">Meu Inglês <span class="muted">2.0</span></div><div class="topTools"><button class="topCounter" id="ttsCounter" title="Áudios e cache">🔊 <span id="ttsCounterValue">0</span></button><span class="tag">LAB</span></div></div>'+
+    '<div class="top"><div class="brand">Meu Inglês <span class="muted">2.0</span></div><div class="topTools"><span class="tag">LAB</span></div></div>'+
     '<div class="hero"><div class="eyebrow">Seu caminho até falar inglês</div><h1>Olá, '+s.name+'.<br>Vamos continuar?</h1><p class="muted">Do zero à conversação, uma etapa de cada vez.</p></div>'+
     '<article class="card continue"><div class="eyebrow">Continuar</div><h2>'+first.title+'</h2><p class="muted">'+first.subtitle+'</p>'+
     '<div class="progress"><span style="width:'+p+'%"></span></div><p class="muted">'+p+'% do módulo</p><button class="primary" id="continue">Continuar →</button></article>'+
@@ -51,8 +48,6 @@ function home(){
   document.querySelector('#continue').onclick=()=>openModule(first.id);
   document.querySelector('#course').onclick=openCourse;
   document.querySelector('#voiceLab').onclick=()=>renderVoiceLab(root,{back:home});
-  const ttsCounter=document.querySelector('#ttsCounter');
-  if(ttsCounter)ttsCounter.onclick=()=>document.querySelector('#audioStatsModal')?.classList.add('open');
   const modalClose=document.querySelector('#audioStatsClose');
   if(modalClose)modalClose.onclick=()=>document.querySelector('#audioStatsModal')?.classList.remove('open');
   const modal=document.querySelector('#audioStatsModal');
@@ -91,10 +86,6 @@ function audioStatsModalMarkup(){
   const s=getAudioStats();
   const total=s.generated+s.cache;
   const rate=total?Math.round((s.cache/total)*100):0;
-  queueMicrotask(()=>{
-    const n=document.querySelector('#ttsCounterValue');
-    if(n)n.textContent=String(total);
-  });
   return '<div class="audioStatsModal" id="audioStatsModal">'+
     '<div class="audioStatsDialog">'+
       '<div class="audioStatsHead"><div><div class="eyebrow">Áudio Gemini 3.8 Flash-Lite</div><h2>Uso de voz e cache</h2></div><button id="audioStatsClose" class="audioStatsClose">×</button></div>'+
@@ -156,4 +147,5 @@ function next(){
   setLessonProgress(session.lesson.id,Math.round(session.index/session.lesson.steps.length*100));
   renderStep();
 }
+installTokenMeters();
 home();
