@@ -121,7 +121,11 @@ function renderStep(){
   root.innerHTML='<section><div class="head"><button class="back" id="back">‹</button><div style="flex:1"><div class="eyebrow">'+session.module.title+'</div><div class="progress"><span style="width:'+pct+'%"></span></div></div></div><article class="card stage">'+body+'</article></section>';
   document.querySelector('#back').onclick=()=>openModule(session.module.id);
   const listen=document.querySelector('#listen');if(listen)listen.onclick=()=>speak(st.audio||st.en||st.target||'');
-  if(st.prompt&&isPortuguesePrompt(st.prompt)) speakPortuguesePrompt(st.prompt);
+  if(st.prompt){
+    const lang=answerLanguage(st.prompt);
+    if(lang==='pt-BR')speakPortuguesePrompt(st.prompt);
+    else speak(st.prompt,'en-US');
+  }
   if(st.options){
     const choices=document.querySelector('#choices');
     st.options.forEach(o=>{const b=document.createElement('button');b.className='choice';b.textContent=o;b.onclick=()=>answer(b,o,st);choices.appendChild(b)});
