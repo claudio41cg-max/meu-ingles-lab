@@ -2,10 +2,11 @@ const TTS_URL='https://meu-ingles-livid.vercel.app/api/gemini-tts';
 const DB_NAME='meuIngles2TTSCacheV1';
 const STORE='voices';
 const STATS_KEY='meuIngles2TTSStatsV1';
-const DEFAULT_MODEL='gemini-2.5-flash-preview-tts';
+const DEFAULT_MODEL='gemini-3.8-flash-lite-tts';
+const FALLBACK_MODEL='gemini-2.5-flash-preview-tts';
 
-export const ENGLISH_VOICE={provider:'gemini-2.5',voice:'Achird',name:'Achird',lang:'en-US'};
-export const PORTUGUESE_VOICE={provider:'gemini-2.5',voice:'Aoede',name:'Aoede',lang:'pt-BR'};
+export const ENGLISH_VOICE={provider:'gemini-3.8-flash-lite',voice:'Achird',name:'Achird',lang:'en-US'};
+export const PORTUGUESE_VOICE={provider:'gemini-3.8-flash-lite',voice:'Aoede',name:'Aoede',lang:'pt-BR'};
 
 const mem=new Map();
 const pending=new Map();
@@ -63,7 +64,7 @@ async function dbPut(key,data){
         audio:data.audio,
         sample_rate:data.sample_rate||24000,
         voice:data.voice||'',
-        model:data.model||'gemini-2.5-flash-preview-tts',
+        model:data.model||DEFAULT_MODEL,
         saved_at:Date.now()
       },key);
       tx.oncomplete=()=>resolve(true);
@@ -97,7 +98,8 @@ function estimate(data,text){
     inputTokens,
     outputTokens,
     tokens:inputTokens+outputTokens,
-    usd:inputTokens*(0.50/1e6)+outputTokens*(10/1e6)
+    usd:inputTokens*((String(data?.model||'').includes('3.8-flash-lite')?0.50:0.50)/1e6)+
+        outputTokens*((String(data?.model||'').includes('3.8-flash-lite')?6.00:10.00)/1e6)
   };
 }
 
@@ -237,10 +239,24 @@ async function speakGemini(text,lang,voice,model=DEFAULT_MODEL){
 
   let job=pending.get(key);
   if(!job){
-    job=requestVoice(text,lang,voice,model)
+    job=(async()=>{
+      try{
+        return await requestVoice(text,lang,voice,model);
+      }catch(primaryError){
+        if(model!==DEFAULT_MODEL)throw primaryError;
+        console.warn('Gemini 3.8 Flash-Lite falhou; tentando 2.5.',primaryError);
+        const fallbackKey=cacheKey(text,lang,voice,FALLBACK_MODEL);
+        const fallbackCached=await cached(fallbackKey);
+        if(fallbackCached)return fallbackCached;
+        const fallbackData=await requestVoice(text,lang,voice,FALLBACK_MODEL);
+        mem.set(fallbackKey,fallbackData);
+        await dbPut(fallbackKey,fallbackData);
+        return fallbackData;
+      }
+    })()
       .then(async d=>{
-        mem.set(key,d);
-        await dbPut(key,d);
+        mem.set(cacheKey(text,lang,voice,d?.model||model),d);
+        await dbPut(cacheKey(text,lang,voice,d?.model||model),d);
         return d;
       })
       .finally(()=>pending.delete(key));
