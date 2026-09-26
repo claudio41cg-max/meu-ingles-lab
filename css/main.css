@@ -183,3 +183,9 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 .audioStatsGrid b{display:block;font-size:20px}
 .audioStatsGrid span{display:block;font-size:11px;color:#a9b0c3;margin-top:3px}
 .audioStatsFoot{font-size:12px;margin-top:10px;line-height:1.45}
+
+
+.voiceCompare{padding:18px;margin-bottom:20px}
+.compareBlock{margin-top:16px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
+.compareButtons{display:flex;gap:10px;margin:10px 0 8px}
+.compareButtons .voicePlay{flex:1}
