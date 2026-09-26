@@ -13,6 +13,7 @@ export function getProfessorVoice(professor){
 const memory=new Map();
 let kokoroPromise=null;
 let activeAudio=null;
+let requestSeq=0;
 
 async function getKokoro(){
   if(!kokoroPromise){
@@ -27,33 +28,46 @@ async function getKokoro(){
   return kokoroPromise;
 }
 
+function stopAllAudio(){
+  requestSeq++;
+  if(activeAudio){
+    activeAudio.pause();
+    activeAudio.currentTime=0;
+    activeAudio=null;
+  }
+  if('speechSynthesis' in window)speechSynthesis.cancel();
+  return requestSeq;
+}
+
 async function speakKokoro(text,voiceId,cachePrefix){
+  const mySeq=stopAllAudio();
   const key=cachePrefix+'|'+text;
   try{
-    if(activeAudio){
-      activeAudio.pause();
-      activeAudio=null;
-    }
     let url=memory.get(key);
     if(!url){
       const tts=await getKokoro();
+      if(mySeq!==requestSeq)return false;
       const raw=await tts.generate(text,{voice:voiceId});
+      if(mySeq!==requestSeq)return false;
       const blob=raw.toBlob();
       url=URL.createObjectURL(blob);
       memory.set(key,url);
     }
-    activeAudio=new Audio(url);
-    await activeAudio.play();
+    if(mySeq!==requestSeq)return false;
+    const audio=new Audio(url);
+    activeAudio=audio;
+    audio.onended=()=>{if(activeAudio===audio)activeAudio=null;};
+    await audio.play();
     return true;
   }catch(err){
-    console.warn('Kokoro indisponível, usando voz do navegador.',err);
+    console.warn('Kokoro indisponível.',err);
     return false;
   }
 }
 
 function speakBrowser(text,lang='en-US'){
   if(!('speechSynthesis' in window))return false;
-  speechSynthesis.cancel();
+  stopAllAudio();
   const u=new SpeechSynthesisUtterance(text);
   u.lang=lang;
   u.rate=lang.startsWith('en')?.86:.94;
@@ -64,15 +78,13 @@ function speakBrowser(text,lang='en-US'){
 export async function speak(text,lang='en-US'){
   if(!text)return false;
   if(lang.startsWith('en')){
-    const ok=await speakKokoro(text,ENGLISH_VOICE.voice,'bella');
-    return ok||speakBrowser(text,'en-US');
+    return speakKokoro(text,ENGLISH_VOICE.voice,'heart');
   }
-  return speakBrowser(text,lang);
+  return false;
 }
 
 export async function speakPortugueseDora(text){
   if(!text)return false;
   const voice=PROFESSOR_VOICES.doideira;
-  const ok=await speakKokoro(text,voice.voice,'alex-question');
-  return ok||speakBrowser(text,'pt-BR');
+  return speakKokoro(text,voice.voice,'alex-question');
 }
