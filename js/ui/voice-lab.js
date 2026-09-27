@@ -161,10 +161,13 @@ export function renderVoiceLab(root,{back}){
     if(!key){audexumStatus.textContent='Informe a chave Audexum primeiro.';return}
     audexumStatus.textContent='Consultando vozes da Audexum...';
     try{
-      let r=await fetch('https://audexum.com/api/voices',{headers:{Authorization:'Bearer '+key}});
-      if(!r.ok)r=await fetch('https://audexum.com/api/v1/voices',{headers:{Authorization:'Bearer '+key}});
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const data=await r.json();
+      const r=await fetch('https://bewdladkzgceerhkshbt.supabase.co/functions/v1/audexum-lab-proxy',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'voices',apiKey:key})
+      });
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(data?.detail||data?.error||('HTTP '+r.status));
       const list=Array.isArray(data)?data:(data.voices||[]);
       const select=root.querySelector('#audexumVoice');
       const ids=[...new Set(list.map(v=>v.id||v.voice||v.voice_id).filter(Boolean))];
@@ -188,14 +191,14 @@ export function renderVoiceLab(root,{back}){
     audexumStatus.textContent='Gerando Audexum · '+voiceId+' · '+lang+'...';
     try{
       stop();
-      const r=await fetch('https://audexum.com/api/synthesize',{
+      const r=await fetch('https://bewdladkzgceerhkshbt.supabase.co/functions/v1/audexum-lab-proxy',{
         method:'POST',
-        headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
-        body:JSON.stringify({text,backend:'supertonic',voice:voiceId,lang,format:'mp3',speed:1.0,steps:8})
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'synthesize',apiKey:key,text,backend:'supertonic',voice:voiceId,lang,format:'mp3',speed:1.0,steps:8})
       });
       if(!r.ok){
         let msg='HTTP '+r.status;
-        try{const j=await r.json();msg=j.message||j.error||msg}catch{}
+        try{const j=await r.json();msg=j.detail||j.message||j.error||msg}catch{}
         throw new Error(msg);
       }
       const blob=await r.blob();
@@ -206,7 +209,7 @@ export function renderVoiceLab(root,{back}){
       await currentAudio.play();
       audexumStatus.textContent='▶ Tocando Audexum · '+voiceId+' · '+lang;
     }catch(e){
-      audexumStatus.textContent='Teste Audexum falhou: '+String(e?.message||e)+'. Se aparecer bloqueio de navegador/CORS, o próximo passo é ligar um proxy seguro no backend.';
+      audexumStatus.textContent='Teste Audexum falhou: '+String(e?.message||e);
     }
   };
 
