@@ -1,8 +1,8 @@
 import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
-import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats,getAudioReport} from './services/tts-service.js?v=15';
-import {renderVoiceLab} from './ui/voice-lab.js?v=14';
+import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats,getAudioReport} from './services/tts-service.js?v=16';
+import {renderVoiceLab} from './ui/voice-lab.js?v=15';
 
 const root=document.querySelector('#app');
 prepareVoices();
@@ -15,7 +15,7 @@ function installTokenMeters(){
   const wrap=document.createElement('div');
   wrap.id='tokenMeters';
   wrap.className='tokenMeters';
-  wrap.innerHTML='<button class="tokenMeter tokenSaved" id="tokenSaved" title="Tokens economizados pelo cache"><span>●</span><b>0</b></button><button class="tokenMeter tokenSpent" id="tokenSpent" title="Tokens cobrados pela IA"><span>●</span><b>0</b></button>';
+  wrap.innerHTML='<button class="tokenMeter tokenFree" id="tokenFree" title="Chamadas Gemini 3.8 Flash TTS no Free Tier"><span>●</span><b>0</b></button><button class="tokenMeter tokenSaved" id="tokenSaved" title="Reproduções reaproveitadas do cache"><span>●</span><b>0</b></button><button class="tokenMeter tokenSpent" id="tokenSpent" title="Tokens estimados em chamadas pagas"><span>●</span><b>0</b></button>';
   document.body.appendChild(wrap);
 
   const modal=document.createElement('div');
@@ -32,11 +32,23 @@ function installTokenMeters(){
   refreshTokenMeters(getAudioStats());
 }
 
+function getFree38Stats(){
+  try{
+    const x=JSON.parse(localStorage.getItem('meuInglesLabGemini38FreeStatsV1')||'{}');
+    return {calls:Number(x.calls)||0,chars:Number(x.chars)||0,bytes:Number(x.bytes)||0,events:Array.isArray(x.events)?x.events:[]};
+  }catch{return {calls:0,chars:0,bytes:0,events:[]}}
+}
+function free38Period(since=0){
+  const e=getFree38Stats().events.filter(x=>Number(x.ts)>=since);
+  return {calls:e.length,chars:e.reduce((a,x)=>a+(Number(x.chars)||0),0),bytes:e.reduce((a,x)=>a+(Number(x.bytes)||0),0)};
+}
 function refreshTokenMeters(s=getAudioStats()){
+  const free=document.querySelector('#tokenFree b');
   const saved=document.querySelector('#tokenSaved b');
   const spent=document.querySelector('#tokenSpent b');
-  if(saved)saved.textContent=formatTokenCount(s.savedTokens);
-  if(spent)spent.textContent=formatTokenCount(s.tokens);
+  if(free)free.textContent=getFree38Stats().calls.toLocaleString('pt-BR');
+  if(saved)saved.textContent=String(s.cache||0);
+  if(spent)spent.textContent=fmtUsd(s.usd||0);
   if(document.getElementById('tokenAuditModal')?.classList.contains('open'))renderTokenAudit();
 }
 
@@ -52,6 +64,11 @@ function renderTokenAudit(){
   if(!modal)return;
   const r=getAudioReport();
   const t=r.today;
+  const now=new Date();
+  const freeToday=free38Period(new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime());
+  const freeWeek=free38Period(Date.now()-7*864e5);
+  const freeMonth=free38Period(new Date(now.getFullYear(),now.getMonth(),1).getTime());
+  const freeAll=free38Period(0);
   const totalToday=(t.generated||0)+(t.cache||0);
   const rate=totalToday?Math.round((t.cache/totalToday)*100):0;
   const recent=(r.recent||[]).map(e=>
@@ -59,7 +76,13 @@ function renderTokenAudit(){
     '<div><b>'+String(e.text||'Áudio').slice(0,58)+'</b><small>'+new Date(e.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+(e.kind==='api'?fmtUsd(e.usd):'economizou '+fmtUsd(e.savedUsd))+'</small></div></div>'
   ).join('');
   modal.innerHTML='<div class="audioStatsDialog auditFull">'+
-    '<div class="audioStatsHead"><div><div class="eyebrow">Gemini 3.8 Flash-Lite</div><h2>Consumo de voz</h2></div><button id="tokenAuditClose" class="audioStatsClose">×</button></div>'+
+    '<div class="audioStatsHead"><div><div class="eyebrow">Meu Inglês Lab</div><h2>Consumo de voz</h2></div><button id="tokenAuditClose" class="audioStatsClose">×</button></div>'+
+    '<div class="billingBands">'+
+      '<div class="billingBand billingFree"><span>GRÁTIS</span><b>Gemini 3.8 Flash TTS</b><strong>'+freeAll.calls+' chamadas</strong><small>'+freeAll.chars.toLocaleString("pt-BR")+' caracteres · US$ 0 no Free Tier</small></div>'+
+      '<div class="billingBand billingPaid"><span>PAGO</span><b>Flash-Lite / fallback</b><strong>'+fmtUsd(r.all.usd)+'</strong><small>'+formatTokenCount(r.all.tokens)+' tokens estimados</small></div>'+
+      '<div class="billingBand billingCache"><span>CACHE</span><b>Áudio reaproveitado</b><strong>'+r.all.cache+' reproduções</strong><small>'+formatTokenCount(r.all.savedTokens)+' tokens evitados</small></div>'+
+    '</div>'+
+    '<div class="freeTierPeriods"><div><small>3.8 grátis hoje</small><b>'+freeToday.calls+'</b><span>'+freeToday.chars.toLocaleString("pt-BR")+' caracteres</span></div><div><small>7 dias</small><b>'+freeWeek.calls+'</b><span>'+freeWeek.chars.toLocaleString("pt-BR")+' caracteres</span></div><div><small>Mês</small><b>'+freeMonth.calls+'</b><span>'+freeMonth.chars.toLocaleString("pt-BR")+' caracteres</span></div></div>'+
     '<div class="auditPeriods">'+periodCard('Sessão atual',r.session)+periodCard('Hoje',r.today)+periodCard('Últimos 7 dias',r.week)+periodCard('Mês atual',r.month)+'</div>'+
     '<div class="audioStatsGrid"><div><b>'+t.generated+'</b><span>gerados IA hoje</span></div><div><b>'+t.cache+'</b><span>do cache hoje</span></div><div><b>'+rate+'%</b><span>reutilização</span></div></div>'+
     '<div class="audioStatsRows">'+
@@ -71,11 +94,12 @@ function renderTokenAudit(){
       '<div><span>Voz reaproveitada</span><b>'+fmtMin(t.savedSeconds)+'</b></div>'+
     '</div>'+
     '<h3 class="auditTitle">Áudios recentes</h3><div class="auditRecentList">'+(recent||'<p class="muted">Ainda não há áudio registrado.</p>')+'</div>'+
-    '<p class="muted audioStatsFoot">Os botões do protótipo mostram o acumulado. Este painel separa sessão, hoje, 7 dias e mês usando a data e hora de cada reprodução.</p>'+
+    '<p class="muted audioStatsFoot">GRÁTIS registra as chamadas bem-sucedidas do Gemini 3.8 Flash TTS completo no laboratório enquanto você estiver no Free Tier. PAGO é uma estimativa das chamadas dos modelos cobrados. CACHE não faz uma nova geração de áudio.</p>'+
   '</div>';
 }
 
 window.addEventListener('meu-ingles-2-tts-stats',e=>refreshTokenMeters(e.detail));
+window.addEventListener('meu-ingles-lab-free-tts',()=>refreshTokenMeters());
 
 function home(){
   const s=getState();

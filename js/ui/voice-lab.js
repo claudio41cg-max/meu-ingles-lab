@@ -1,4 +1,4 @@
-import {previewGeminiModel} from '../services/tts-service.js?v=8';
+import {previewGeminiModel} from '../services/tts-service.js?v=16';
 const voices=[
   {id:'pf_dora',name:'Dora',lang:'Português BR · feminina',group:'pt',url:'https://raw.githubusercontent.com/alexlivre/kokoro-82m-tts/main/test_pf_dora.mp3'},
   {id:'pm_alex',name:'Alex',lang:'Português BR · masculina',group:'pt',url:'https://raw.githubusercontent.com/alexlivre/kokoro-82m-tts/main/test_pm_alex.mp3'},
@@ -9,6 +9,21 @@ const voices=[
   {id:'bm_george',name:'George',lang:'Inglês UK · masculina',group:'en',url:'https://raw.githubusercontent.com/KingRabbiTV/Kokoro-82M-samples/main/samples/bm_george.mp3'}
 ];
 let currentAudio=null;
+const FREE38_STATS_KEY='meuInglesLabGemini38FreeStatsV1';
+
+function loadFree38Stats(){
+  try{
+    const x=JSON.parse(localStorage.getItem(FREE38_STATS_KEY)||'{}');
+    return {calls:Number(x.calls)||0,chars:Number(x.chars)||0,bytes:Number(x.bytes)||0,events:Array.isArray(x.events)?x.events:[]};
+  }catch{return {calls:0,chars:0,bytes:0,events:[]}}
+}
+function recordFree38(text,bytes=0){
+  const s=loadFree38Stats();
+  const e={ts:Date.now(),chars:String(text||'').length,bytes:Number(bytes)||0,model:'gemini-3.8-flash-tts',tier:'free'};
+  s.calls++;s.chars+=e.chars;s.bytes+=e.bytes;s.events.push(e);s.events=s.events.slice(-1000);
+  try{localStorage.setItem(FREE38_STATS_KEY,JSON.stringify(s))}catch{}
+  window.dispatchEvent(new CustomEvent('meu-ingles-lab-free-tts',{detail:s}));
+}
 
 export function renderVoiceLab(root,{back}){
   root.innerHTML=`
@@ -227,6 +242,7 @@ export function renderVoiceLab(root,{back}){
         throw new Error(msg);
       }
       const blob=await r.blob();
+      recordFree38(text,blob.size);
       const url=URL.createObjectURL(blob);
       currentAudio=new Audio(url);
       currentAudio.onended=()=>{URL.revokeObjectURL(url);gemini38Status.textContent='Gemini 3.8 Flash completo concluído.'};

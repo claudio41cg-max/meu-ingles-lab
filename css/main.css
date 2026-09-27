@@ -239,3 +239,20 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
   .audexumKeyRow{grid-template-columns:1fr}
   .audexumKeyRow button{width:100%}
 }
+
+.tokenFree{border-color:rgba(96,165,250,.35)}
+.billingBands{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.billingBand{display:grid;gap:4px;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.035)}
+.billingBand span{font-size:10px;font-weight:900;letter-spacing:.12em}
+.billingBand b{font-size:13px}
+.billingBand strong{font-size:20px}
+.billingBand small{opacity:.72;line-height:1.35}
+.freeTierPeriods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 14px}
+.freeTierPeriods>div{display:grid;gap:3px;padding:10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}
+.freeTierPeriods small,.freeTierPeriods span{opacity:.7}
+.freeTierPeriods b{font-size:18px}
+@media(max-width:720px){
+  .billingBands{grid-template-columns:1fr}
+  .freeTierPeriods{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .freeTierPeriods span{font-size:10px}
+}
