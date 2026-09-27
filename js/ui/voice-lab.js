@@ -50,6 +50,52 @@ export function renderVoiceLab(root,{back}){
       <div id="geminiTestStatus" class="muted" style="margin-top:10px"></div>
     </article>
 
+    <article class="card voiceCompare" id="audexumLab">
+      <div class="eyebrow">Audexum TTS · laboratório</div>
+      <h3 style="margin:5px 0 6px">Audexum × Gemini</h3>
+      <p class="muted">A chave não vai para o GitHub. Ela fica somente nesta sessão do navegador enquanto você testa.</p>
+
+      <div style="display:grid;gap:10px">
+        <label>
+          <small class="muted">Chave Audexum</small>
+          <div style="display:flex;gap:8px;margin-top:5px">
+            <input id="audexumKey" type="password" placeholder="sk_live_..." style="flex:1;min-width:0">
+            <button class="secondary" id="audexumSaveKey">Usar nesta sessão</button>
+          </div>
+        </label>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label><small class="muted">Idioma</small>
+            <select id="audexumLang" style="width:100%;margin-top:5px">
+              <option value="en">Inglês</option><option value="pt">Português</option>
+              <option value="es">Espanhol</option><option value="fr">Francês</option>
+              <option value="de">Alemão</option><option value="it">Italiano</option>
+              <option value="ja">Japonês</option><option value="ko">Coreano</option>
+              <option value="ar">Árabe</option><option value="hi">Hindi</option>
+              <option value="bg">Búlgaro</option><option value="ru">Russo</option>
+            </select>
+          </label>
+          <label><small class="muted">Voz V2 Studio</small>
+            <select id="audexumVoice" style="width:100%;margin-top:5px">
+              <option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option>
+              <option>M1</option><option>M2</option><option>M3</option><option>M4</option><option>M5</option>
+            </select>
+          </label>
+        </div>
+
+        <label><small class="muted">Frase de teste</small>
+          <textarea id="audexumText" rows="3" style="width:100%;margin-top:5px">Hello! How are you today?</textarea>
+        </label>
+
+        <div class="compareButtons">
+          <button class="voicePlay" id="audexumPlay">▶ Audexum</button>
+          <button class="voicePlay" id="audexumGemini">▶ Gemini</button>
+          <button class="secondary" id="audexumVoices">Carregar vozes</button>
+        </div>
+        <div id="audexumStatus" class="muted"></div>
+      </div>
+    </article>
+
     <h3>Português brasileiro</h3>
     <div class="voiceGrid">${voices.filter(v=>v.group==='pt').map(card).join('')}</div>
 
@@ -97,6 +143,90 @@ export function renderVoiceLab(root,{back}){
       }
     };
   });
+
+  const audexumKey=root.querySelector('#audexumKey');
+  const audexumStatus=root.querySelector('#audexumStatus');
+  const savedKey=sessionStorage.getItem('meuInglesLabAudexumKey')||'';
+  if(savedKey)audexumKey.value=savedKey;
+
+  root.querySelector('#audexumSaveKey').onclick=()=>{
+    const key=audexumKey.value.trim();
+    if(!key){sessionStorage.removeItem('meuInglesLabAudexumKey');audexumStatus.textContent='Chave removida desta sessão.';return}
+    sessionStorage.setItem('meuInglesLabAudexumKey',key);
+    audexumStatus.textContent='Chave pronta apenas nesta sessão. Nada foi salvo no GitHub.';
+  };
+
+  root.querySelector('#audexumVoices').onclick=async()=>{
+    const key=(audexumKey.value.trim()||sessionStorage.getItem('meuInglesLabAudexumKey')||'');
+    if(!key){audexumStatus.textContent='Informe a chave Audexum primeiro.';return}
+    audexumStatus.textContent='Consultando vozes da Audexum...';
+    try{
+      let r=await fetch('https://audexum.com/api/voices',{headers:{Authorization:'Bearer '+key}});
+      if(!r.ok)r=await fetch('https://audexum.com/api/v1/voices',{headers:{Authorization:'Bearer '+key}});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const data=await r.json();
+      const list=Array.isArray(data)?data:(data.voices||[]);
+      const select=root.querySelector('#audexumVoice');
+      const ids=[...new Set(list.map(v=>v.id||v.voice||v.voice_id).filter(Boolean))];
+      if(ids.length){
+        select.innerHTML=ids.map(id=>'<option>'+String(id)+'</option>').join('');
+        audexumStatus.textContent=ids.length+' vozes recebidas da Audexum.';
+      }else audexumStatus.textContent='A Audexum respondeu, mas não encontrei IDs de voz na resposta.';
+    }catch(e){
+      audexumStatus.textContent='Não consegui listar as vozes: '+String(e?.message||e);
+    }
+  };
+
+  root.querySelector('#audexumPlay').onclick=async()=>{
+    const key=(audexumKey.value.trim()||sessionStorage.getItem('meuInglesLabAudexumKey')||'');
+    const text=root.querySelector('#audexumText').value.trim();
+    const lang=root.querySelector('#audexumLang').value;
+    const voiceId=root.querySelector('#audexumVoice').value;
+    if(!key){audexumStatus.textContent='Informe a chave Audexum primeiro.';return}
+    if(!text){audexumStatus.textContent='Digite uma frase para testar.';return}
+    sessionStorage.setItem('meuInglesLabAudexumKey',key);
+    audexumStatus.textContent='Gerando Audexum · '+voiceId+' · '+lang+'...';
+    try{
+      stop();
+      const r=await fetch('https://audexum.com/api/synthesize',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
+        body:JSON.stringify({text,backend:'supertonic',voice:voiceId,lang,format:'mp3',speed:1.0,steps:8})
+      });
+      if(!r.ok){
+        let msg='HTTP '+r.status;
+        try{const j=await r.json();msg=j.message||j.error||msg}catch{}
+        throw new Error(msg);
+      }
+      const blob=await r.blob();
+      const url=URL.createObjectURL(blob);
+      currentAudio=new Audio(url);
+      currentAudio.onended=()=>{URL.revokeObjectURL(url);audexumStatus.textContent='Audexum concluída. Agora compare com Gemini.'};
+      currentAudio.onerror=()=>{URL.revokeObjectURL(url);audexumStatus.textContent='Recebi o áudio, mas o navegador não conseguiu reproduzir.'};
+      await currentAudio.play();
+      audexumStatus.textContent='▶ Tocando Audexum · '+voiceId+' · '+lang;
+    }catch(e){
+      audexumStatus.textContent='Teste Audexum falhou: '+String(e?.message||e)+'. Se aparecer bloqueio de navegador/CORS, o próximo passo é ligar um proxy seguro no backend.';
+    }
+  };
+
+  root.querySelector('#audexumGemini').onclick=async()=>{
+    const text=root.querySelector('#audexumText').value.trim();
+    const lang=root.querySelector('#audexumLang').value;
+    if(!text){audexumStatus.textContent='Digite uma frase para testar.';return}
+    if(!['en','pt'].includes(lang)){
+      audexumStatus.textContent='Neste Lab, a comparação Gemini está pronta para inglês e português. A Audexum pode continuar sendo testada nos outros idiomas.';
+      return;
+    }
+    audexumStatus.textContent='Gerando a mesma frase no Gemini...';
+    const ok=await previewGeminiModel({
+      text,
+      lang:lang==='pt'?'pt-BR':'en-US',
+      voice:lang==='pt'?'Aoede':'Achird',
+      model:'gemini-3.8-flash-lite-tts'
+    });
+    audexumStatus.textContent=ok?'Gemini concluído. Compare o timbre com a Audexum.':'O Gemini não conseguiu gerar este teste.';
+  };
 }
 
 function card(v){

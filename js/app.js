@@ -2,7 +2,7 @@ import {course} from './courses/a1/course.js';
 import {moduleProgress,isLessonUnlocked} from './core/progress.js';
 import {setLessonProgress,getState} from './core/state.js';
 import {speak,speakPortuguesePrompt,prepareVoices,getAudioStats,getAudioReport} from './services/tts-service.js?v=15';
-import {renderVoiceLab} from './ui/voice-lab.js?v=10';
+import {renderVoiceLab} from './ui/voice-lab.js?v=11';
 
 const root=document.querySelector('#app');
 prepareVoices();
@@ -90,7 +90,7 @@ function home(){
     '<div class="grid">'+
       '<article class="card tile" id="course"><div>📚</div><b>Curso principal</b><span class="muted">Pre-A1 → C1</span></article>'+
       '<article class="card tile"><div>🧠</div><b>Praticar</b><span class="muted">Revisão inteligente</span></article>'+
-      '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Kokoro · teste gratuito</span></article>'+
+      '<article class="card tile" id="voiceLab"><div>🎙️</div><b>Laboratório de vozes</b><span class="muted">Gemini · Audexum · Kokoro</span></article>'+
       '<article class="card tile"><div>🎮</div><b>Explorar</b><span class="muted">Games e extras</span></article>'+
     '</div></section>';
   document.querySelector('#continue').onclick=()=>openModule(first.id);
