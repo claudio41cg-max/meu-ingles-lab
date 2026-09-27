@@ -58,8 +58,8 @@ export function renderVoiceLab(root,{back}){
       <div style="display:grid;gap:10px">
         <label>
           <small class="muted">Chave Audexum</small>
-          <div style="display:flex;gap:8px;margin-top:5px">
-            <input id="audexumKey" type="password" placeholder="sk_live_..." style="flex:1;min-width:0">
+          <div class="audexumKeyRow">
+            <input id="audexumKey" type="password" placeholder="Cole aqui sua chave da Audexum">
             <button class="secondary" id="audexumSaveKey">Usar nesta sessão</button>
           </div>
         </label>

@@ -231,3 +231,11 @@ button:active,.row:active,.tile:active{transform:var(--tap)}
 .auditPaid{background:rgba(165,38,52,.28);color:#ff8792}
 .auditCache{background:rgba(13,125,75,.28);color:#6cf2ad}
 @media(max-width:430px){.auditPeriods{grid-template-columns:1fr 1fr}.auditPeriod{padding:12px}.auditPeriod b{font-size:17px}}
+
+.audexumKeyRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:5px;align-items:stretch}
+.audexumKeyRow input{width:100%;min-width:0;box-sizing:border-box}
+.audexumKeyRow button{white-space:nowrap}
+@media(max-width:720px){
+  .audexumKeyRow{grid-template-columns:1fr}
+  .audexumKeyRow button{width:100%}
+}
