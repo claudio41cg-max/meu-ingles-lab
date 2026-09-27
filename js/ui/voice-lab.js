@@ -50,6 +50,49 @@ export function renderVoiceLab(root,{back}){
       <div id="geminiTestStatus" class="muted" style="margin-top:10px"></div>
     </article>
 
+    <article class="card voiceCompare" id="gemini38Lab">
+      <div class="eyebrow">Gemini API · laboratório</div>
+      <h3 style="margin:5px 0 6px">Gemini 3.8 Flash TTS completo</h3>
+      <p class="muted">Teste com a sua nova chave do Gemini API. A chave fica somente nesta sessão do navegador e não vai para o GitHub.</p>
+
+      <div style="display:grid;gap:10px">
+        <label>
+          <small class="muted">Chave Gemini API</small>
+          <div class="audexumKeyRow">
+            <input id="gemini38Key" type="password" placeholder="Cole aqui sua chave do Gemini API">
+            <button class="secondary" id="gemini38SaveKey">Usar nesta sessão</button>
+          </div>
+        </label>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label><small class="muted">Voz</small>
+            <select id="gemini38Voice" style="width:100%;margin-top:5px">
+              <option>Kore</option><option>Aoede</option><option>Achird</option><option>Puck</option>
+              <option>Leda</option><option>Zephyr</option>
+            </select>
+          </label>
+          <label><small class="muted">Estilo</small>
+            <select id="gemini38Style" style="width:100%;margin-top:5px">
+              <option value="Natural, clear, warm and conversational.">Natural</option>
+              <option value="Warm, friendly teacher voice with clear pronunciation.">Professor</option>
+              <option value="Cheerful, energetic and expressive.">Animada</option>
+              <option value="Calm, slow and very clear for a language learner.">Lenta e clara</option>
+            </select>
+          </label>
+        </div>
+
+        <label><small class="muted">Frase de teste</small>
+          <textarea id="gemini38Text" rows="3" style="width:100%;margin-top:5px">Hello! How are you today?</textarea>
+        </label>
+
+        <div class="compareButtons">
+          <button class="voicePlay" id="gemini38Play">▶ 3.8 Flash completo</button>
+          <button class="voicePlay" id="gemini38LitePlay">▶ 3.8 Flash-Lite</button>
+        </div>
+        <div id="gemini38Status" class="muted"></div>
+      </div>
+    </article>
+
     <article class="card voiceCompare" id="audexumLab">
       <div class="eyebrow">Audexum TTS · laboratório</div>
       <h3 style="margin:5px 0 6px">Audexum × Gemini</h3>
@@ -143,6 +186,71 @@ export function renderVoiceLab(root,{back}){
       }
     };
   });
+
+  const gemini38Key=root.querySelector('#gemini38Key');
+  const gemini38Status=root.querySelector('#gemini38Status');
+  const savedGemini38Key=sessionStorage.getItem('meuInglesLabGemini38Key')||'';
+  if(savedGemini38Key)gemini38Key.value=savedGemini38Key;
+
+  root.querySelector('#gemini38SaveKey').onclick=()=>{
+    const key=gemini38Key.value.trim();
+    if(!key){sessionStorage.removeItem('meuInglesLabGemini38Key');gemini38Status.textContent='Chave removida desta sessão.';return}
+    sessionStorage.setItem('meuInglesLabGemini38Key',key);
+    gemini38Status.textContent='Chave pronta apenas nesta sessão. Nada foi salvo no GitHub.';
+  };
+
+  root.querySelector('#gemini38Play').onclick=async()=>{
+    const key=(gemini38Key.value.trim()||sessionStorage.getItem('meuInglesLabGemini38Key')||'');
+    const text=root.querySelector('#gemini38Text').value.trim();
+    const voiceId=root.querySelector('#gemini38Voice').value;
+    const style=root.querySelector('#gemini38Style').value;
+    if(!key){gemini38Status.textContent='Informe a chave Gemini API primeiro.';return}
+    if(!text){gemini38Status.textContent='Digite uma frase para testar.';return}
+    sessionStorage.setItem('meuInglesLabGemini38Key',key);
+    gemini38Status.textContent='Gerando Gemini 3.8 Flash TTS completo...';
+    try{
+      stop();
+      const r=await fetch('https://bewdladkzgceerhkshbt.supabase.co/functions/v1/gemini38-lab-proxy',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          apiKey:key,
+          text,
+          voice:voiceId,
+          style,
+          model:'gemini-3.8-flash-tts'
+        })
+      });
+      if(!r.ok){
+        let msg='HTTP '+r.status;
+        try{const j=await r.json();msg=j.detail||j.error||msg}catch{}
+        throw new Error(msg);
+      }
+      const blob=await r.blob();
+      const url=URL.createObjectURL(blob);
+      currentAudio=new Audio(url);
+      currentAudio.onended=()=>{URL.revokeObjectURL(url);gemini38Status.textContent='Gemini 3.8 Flash completo concluído.'};
+      currentAudio.onerror=()=>{URL.revokeObjectURL(url);gemini38Status.textContent='Recebi o áudio, mas o navegador não conseguiu reproduzir.'};
+      await currentAudio.play();
+      gemini38Status.textContent='▶ Tocando Gemini 3.8 Flash TTS completo · '+voiceId;
+    }catch(e){
+      gemini38Status.textContent='Teste Gemini 3.8 falhou: '+String(e?.message||e);
+    }
+  };
+
+  root.querySelector('#gemini38LitePlay').onclick=async()=>{
+    const text=root.querySelector('#gemini38Text').value.trim();
+    const voiceId=root.querySelector('#gemini38Voice').value;
+    if(!text){gemini38Status.textContent='Digite uma frase para testar.';return}
+    gemini38Status.textContent='Gerando 3.8 Flash-Lite para comparar...';
+    const ok=await previewGeminiModel({
+      text,
+      lang:'en-US',
+      voice:voiceId,
+      model:'gemini-3.8-flash-lite-tts'
+    });
+    gemini38Status.textContent=ok?'3.8 Flash-Lite concluído. Compare com o 3.8 Flash completo.':'O Flash-Lite não conseguiu gerar este teste.';
+  };
 
   const audexumKey=root.querySelector('#audexumKey');
   const audexumStatus=root.querySelector('#audexumStatus');
